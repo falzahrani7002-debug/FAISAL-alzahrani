@@ -15,6 +15,7 @@ import EducationalContentSection from './components/EducationalContentSection';
 import InsulinFriendSection from './components/InsulinFriendSection';
 import StarCollectionSection from './components/StarCollectionSection';
 import Footer from './components/Footer';
+import CarbCalculatorSection from './components/CarbCalculatorSection';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
@@ -47,6 +48,8 @@ const App: React.FC = () => {
         return <InsulinFriendSection />;
       case Page.StarCollection:
         return <StarCollectionSection />;
+      case Page.CarbCalculator:
+        return <CarbCalculatorSection />;
       default:
         return <HomePage navigateTo={navigateTo} />;
     }

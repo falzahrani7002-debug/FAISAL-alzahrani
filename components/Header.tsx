@@ -36,6 +36,7 @@ const Header: React.FC<HeaderProps> = ({ navigateTo, currentPage }) => {
     { page: Page.Educational, label: 'أفكار تعليمية' },
     { page: Page.InsulinFriend, label: 'صديقي الإنسولين' },
     { page: Page.StarCollection, label: 'تجميع النجوم' },
+    { page: Page.CarbCalculator, label: 'حاسبة الكاربوهيدرات' },
   ];
 
   return (

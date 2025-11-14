@@ -10,6 +10,7 @@ export enum Page {
   Educational = 'educational',
   InsulinFriend = 'insulin_friend',
   StarCollection = 'star_collection',
+  CarbCalculator = 'carb_calculator',
 }
 
 export interface SugarReading {
