@@ -419,8 +419,8 @@ const StarCollectorGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ o
                     <span className="text-8xl text-white animate-ping">{feedback === 'correct' ? '✅' : '❌'}</span>
                 </div>
             )}
-            <div className="absolute top-4 right-4 text-2xl font-bold text-cyan-500 bg-white/70 px-3 py-1 rounded-full">النتيجة: <span className="font-mono">{score}</span></div>
-            <div className="absolute top-4 left-4 text-xl font-bold text-cyan-500">تحدي <span className="font-mono">{currentIndex + 1}/{challenges.length}</span></div>
+            <div className="absolute top-4 right-4 text-2xl font-bold text-cyan-500 bg-white/70 px-3 py-1 rounded-full">النتيجة: <span className="font-mono text-cyan-500">{score}</span></div>
+            <div className="absolute top-4 left-4 text-xl font-bold text-cyan-500">تحدي <span className="font-mono text-cyan-500">{currentIndex + 1}/{challenges.length}</span></div>
             
             <h3 className="text-3xl font-bold text-yellow-900 mb-8">{currentChallenge.prompt}</h3>
             
@@ -735,8 +735,8 @@ const EmergencyKitGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
 
     return (
         <div className="w-full h-full flex flex-col items-center p-8 bg-orange-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-orange-800 mb-2">لعبة حقيبة الطوارئ</h3>
-            <p className="text-lg text-gray-700 mb-6">اختر كل الأغراض المهمة التي يجب أن تكون في حقيبة طوارئ السكري.</p>
+            <h3 className="text-3xl font-bold text-black mb-2">لعبة حقيبة الطوارئ</h3>
+            <p className="text-lg text-black mb-6">اختر كل الأغراض المهمة التي يجب أن تكون في حقيبة طوارئ السكري.</p>
             <div className="w-full max-w-2xl bg-white p-4 rounded-lg shadow-md mb-4">
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                     {allKitItems.map(item => {
@@ -751,7 +751,7 @@ const EmergencyKitGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
                             <button key={item.name} onClick={() => toggleItem(item.name)} disabled={submitted}
                                     className={`p-3 rounded-lg border-2 transition-all duration-300 ${isSelected && !submitted ? 'bg-blue-200 border-blue-500' : 'bg-gray-100 border-gray-200'} ${feedbackClass}`}>
                                 <span className="text-4xl">{item.emoji}</span>
-                                <span className="block text-sm font-semibold">{item.name}</span>
+                                <span className="block text-sm font-semibold text-black">{item.name}</span>
                             </button>
                         );
                     })}
@@ -760,7 +760,7 @@ const EmergencyKitGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
             {!submitted ? (
                 <button onClick={checkKit} className="w-full max-w-lg mt-4 bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700">تحقق من الحقيبة</button>
             ) : (
-                 <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg">يتم حساب نتيجتك... أحسنت!</p>
+                 <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg text-black">يتم حساب نتيجتك... أحسنت!</p>
             )}
         </div>
     );
