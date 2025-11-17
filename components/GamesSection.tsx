@@ -766,6 +766,158 @@ const EmergencyKitGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
     );
 };
 
+// New Parent Game: Myth Busters
+interface Myth {
+    id: number;
+    statement: string;
+    isMyth: boolean; // true if it's a myth, false if it's a fact
+    explanation: string;
+}
+const myths: Myth[] = [
+    { id: 1, statement: 'أكل الكثير من السكر يسبب مرض السكري من النوع الأول.', isMyth: true, explanation: 'خرافة! النوع الأول هو مرض مناعي ذاتي، وليس له علاقة مباشرة بكمية السكر المتناولة.' },
+    { id: 2, statement: 'الأطفال المصابون بالسكري لا يمكنهم أكل الحلويات أبدًا.', isMyth: true, explanation: 'خرافة! يمكنهم أكل الحلويات باعتدال كجزء من خطة وجبات متوازنة مع حساب جرعة الإنسولين.' },
+    { id: 3, statement: 'الإنسولين يسبب الإدمان.', isMyth: true, explanation: 'خرافة! الإنسولين هو هرمون حيوي يحتاجه الجسم للبقاء على قيد الحياة، وهو ليس مادة إدمانية.' },
+    { id: 4, statement: 'يمكن "الشفاء" من مرض السكري من النوع الأول بالأعشاب.', isMyth: true, explanation: 'خرافة! حتى الآن، لا يوجد علاج شافٍ للسكري من النوع الأول، والعلاج الوحيد هو الإنسولين.' },
+    { id: 5, statement: 'الرياضة خطيرة على الأطفال المصابين بالسكري.', isMyth: true, explanation: 'خرافة! الرياضة ضرورية ومفيدة جدًا، لكنها تتطلب تخطيطًا ومراقبة لمستوى السكر لتجنب الانخفاض.' },
+    { id: 6, statement: 'إذا كنت مصابًا بالسكري، فلن تتمكن من ممارسة الرياضة.', isMyth: true, explanation: 'خرافة! الرياضة مهمة جدًا ومفيدة، ولكنها تتطلب تخطيطًا ومراقبة لمستوى السكر.' },
+    { id: 7, statement: 'الإنسولين هو علاج نهائي للسكري.', isMyth: true, explanation: 'خرافة! الإنسولين هو علاج لإدارة السكري، ولكنه ليس شفاءً. إنه ضروري للحياة.' },
+    { id: 8, statement: 'التوتر والقلق يمكن أن يؤثرا على مستويات السكر في الدم.', isMyth: false, explanation: 'حقيقة! التوتر يمكن أن يرفع أو يخفض مستويات السكر، لذلك من المهم تعلم طرق الاسترخاء.' },
+    { id: 9, statement: 'يمكن أن تنتقل عدوى السكري من شخص لآخر.', isMyth: true, explanation: 'خرافة! السكري ليس مرضًا معديًا على الإطلاق، لا يمكنك "التقاطه" من شخص آخر.' },
+];
+
+const MythBustersGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
+    const [gameMyths] = useState<Myth[]>(() => shuffleArray([...myths]));
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [score, setScore] = useState(0);
+    const [feedback, setFeedback] = useState<{ correct: boolean; explanation: string } | null>(null);
+    const currentMyth = gameMyths[currentIndex];
+
+    const handleAnswer = (userAnswerIsMyth: boolean) => {
+        if (feedback) return;
+        const isCorrect = userAnswerIsMyth === currentMyth.isMyth;
+        if (isCorrect) {
+            setScore(s => s + 5);
+            playSound('levelUp');
+        } else {
+            playSound('incorrect');
+        }
+        setFeedback({ correct: isCorrect, explanation: currentMyth.explanation });
+
+        setTimeout(() => {
+            setFeedback(null);
+            if (currentIndex + 1 < gameMyths.length) {
+                setCurrentIndex(i => i + 1);
+            } else {
+                playSound('win');
+                onGameEnd(score + (isCorrect ? 5 : 0));
+            }
+        }, 3500);
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-gray-200 rounded-lg text-center">
+            <h3 className="text-3xl font-bold text-gray-800 mb-6">لعبة كشف الخرافات</h3>
+            <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg mb-6">
+                <p className="text-xl font-semibold mb-2 text-gray-500">العبارة ({currentIndex + 1}/{gameMyths.length}):</p>
+                <p className="text-2xl text-gray-800">{currentMyth.statement}</p>
+            </div>
+            {!feedback ? (
+                <div className="flex gap-8">
+                    <button onClick={() => handleAnswer(false)} className="bg-green-500 text-white font-bold py-4 px-10 rounded-lg text-xl hover:bg-green-600 transition">حقيقة</button>
+                    <button onClick={() => handleAnswer(true)} className="bg-red-500 text-white font-bold py-4 px-10 rounded-lg text-xl hover:bg-red-600 transition">خرافة</button>
+                </div>
+            ) : (
+                <div className={`p-4 rounded-lg w-full max-w-lg ${feedback.correct ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <h4 className={`text-2xl font-bold ${feedback.correct ? 'text-green-700' : 'text-red-700'}`}>
+                        {feedback.correct ? 'إجابة صحيحة!' : 'إجابة خاطئة!'}
+                    </h4>
+                    <p className="mt-2 text-gray-700">{feedback.explanation}</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// New Parent Game: Carb Counting Pro
+interface Meal { id: number; name: string; items: string; emoji: string; answer: number; }
+const meals: Meal[] = [
+    { id: 1, name: 'وجبة فطور', items: 'كوب حليب، نصف كوب شوفان، موزة صغيرة', emoji: '🥣', answer: 60 },
+    { id: 2, name: 'وجبة غداء', items: 'صدر دجاج مشوي، كوب أرز، صحن سلطة صغير', emoji: '🍛', answer: 50 },
+    { id: 3, name: 'وجبة عشاء', items: 'قطعة بيتزا مارجريتا متوسطة', emoji: '🍕', answer: 35 },
+    { id: 4, name: 'وجبة خفيفة', items: 'تفاحة متوسطة مع ملعقة زبدة فول سوداني', emoji: '🍎', answer: 25 },
+];
+
+const CarbCountingProGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
+    const [gameMeals] = useState(() => shuffleArray([...meals]));
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [userAnswer, setUserAnswer] = useState('');
+    const [score, setScore] = useState(0);
+    const [feedback, setFeedback] = useState<string | null>(null);
+    const currentMeal = gameMeals[currentIndex];
+
+    const checkAnswer = () => {
+        if (feedback) return;
+        const answer = parseInt(userAnswer, 10);
+        if (isNaN(answer)) {
+            setFeedback("الرجاء إدخال رقم صحيح.");
+            setTimeout(() => setFeedback(null), 1500);
+            return;
+        }
+
+        const difference = Math.abs(answer - currentMeal.answer);
+        let isCorrect = false;
+        if (difference <= 5) { // within 5g is correct
+            setScore(s => s + 10);
+            isCorrect = true;
+            playSound('levelUp');
+            setFeedback(`ممتاز! الإجابة الصحيحة حوالي ${currentMeal.answer} جرام.`);
+        } else {
+            playSound('incorrect');
+            setFeedback(`قريب! الإجابة الصحيحة حوالي ${currentMeal.answer} جرام.`);
+        }
+
+        setTimeout(() => {
+            setFeedback(null);
+            setUserAnswer('');
+            if (currentIndex + 1 < gameMeals.length) {
+                setCurrentIndex(i => i + 1);
+            } else {
+                playSound('win');
+                onGameEnd(score + (isCorrect ? 10 : 0));
+            }
+        }, 3000);
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-indigo-100 rounded-lg text-center">
+            <h3 className="text-3xl font-bold text-indigo-800 mb-6">حساب الكربوهيدرات المتقدم</h3>
+            <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg mb-6">
+                <p className="text-xl font-semibold text-gray-500">الوجبة ({currentIndex + 1}/{gameMeals.length}):</p>
+                <div className="text-6xl my-4">{currentMeal.emoji}</div>
+                <h4 className="text-2xl font-bold text-indigo-900">{currentMeal.name}</h4>
+                <p className="text-gray-600">{currentMeal.items}</p>
+            </div>
+            <div>
+                <label htmlFor="carb-input" className="block text-lg font-medium text-gray-700 mb-2">كم جرامًا من الكربوهيدرات في هذه الوجبة (تقريبًا)؟</label>
+                <input 
+                    id="carb-input"
+                    type="number" 
+                    value={userAnswer}
+                    onChange={e => setUserAnswer(e.target.value)}
+                    className="w-48 text-center text-3xl p-2 border-2 border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="0"
+                    disabled={!!feedback}
+                />
+                <button onClick={checkAnswer} disabled={!userAnswer || !!feedback} className="mt-4 ml-4 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-300">
+                    تأكيد
+                </button>
+            </div>
+            {feedback && <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg">{feedback}</p>}
+        </div>
+    );
+};
+
+
 // --- GAME DEFINITIONS ---
 
 const kidGameDefs = [
@@ -782,10 +934,12 @@ const parentGameDefs = [
     { id: 'symptomSpotter', name: 'علامات الخطر', description: 'تعلم التمييز بين أعراض الهبوط والارتفاع.', component: 'SymptomSpotterGame' },
     { id: 'mealPlanner', name: 'مخطط الوجبات', description: 'مارس تخطيط وجبات متوازنة بالكربوهيدرات.', component: 'MealPlannerGame' },
     { id: 'emergencyKit', name: 'حقيبة الطوارئ', description: 'تأكد من معرفتك بمحتويات حقيبة الطوارئ.', component: 'EmergencyKitGame' },
-]
+    { id: 'mythBusters', name: 'كشف الخرافات', description: 'اختبر معلوماتك حول الخرافات الشائعة عن السكري.', component: 'MythBustersGame' },
+    { id: 'carbCountingPro', name: 'حساب الكارب المتقدم', description: 'قدّر الكربوهيدرات في وجبات كاملة.', component: 'CarbCountingProGame' },
+];
 
 type KidGameId = 'catcher' | 'chooser' | 'embarrassing' | 'memoryMatch' | 'sugarBalance' | 'starCollector';
-type ParentGameId = 'dosageCalculator' | 'symptomSpotter' | 'mealPlanner' | 'emergencyKit';
+type ParentGameId = 'dosageCalculator' | 'symptomSpotter' | 'mealPlanner' | 'emergencyKit' | 'mythBusters' | 'carbCountingPro';
 type GameId = KidGameId | ParentGameId;
 
 // --- MAIN GAMES SECTION COMPONENT ---
@@ -796,11 +950,18 @@ export const GamesSection: React.FC = () => {
     const [lastGameScore, setLastGameScore] = useState<number | null>(null);
 
     const handleGameEnd = useCallback((score: number) => {
-        const starsEarned = Math.floor(score / 2) + 5;
+        let starsEarned;
+        // For MythBusters, the score is already the star count (5 per correct answer)
+        if (activeGame === 'mythBusters') {
+            starsEarned = score;
+        } else {
+            // Default formula for other games
+            starsEarned = Math.floor(score / 2) + 5;
+        }
         addStars(starsEarned);
         setLastGameScore(starsEarned);
         setActiveGame(null);
-    }, []);
+    }, [activeGame]);
 
     const renderActiveGame = () => {
         if (!activeGame) return null;
@@ -817,6 +978,8 @@ export const GamesSection: React.FC = () => {
             case 'symptomSpotter': return <SymptomSpotterGame onGameEnd={handleGameEnd} />;
             case 'mealPlanner': return <MealPlannerGame onGameEnd={handleGameEnd} />;
             case 'emergencyKit': return <EmergencyKitGame onGameEnd={handleGameEnd} />;
+            case 'mythBusters': return <MythBustersGame onGameEnd={handleGameEnd} />;
+            case 'carbCountingPro': return <CarbCountingProGame onGameEnd={handleGameEnd} />;
             default: return null;
         }
     };
@@ -838,7 +1001,7 @@ export const GamesSection: React.FC = () => {
                     </button>
                     <button onClick={() => { playSound('click'); setUserType('parent'); }} className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                         <AdultIcon className="w-24 h-24 text-blue-500 mb-4" />
-                        <span className="text-2xl font-bold text-blue-800">أنا ولي أمر</span>
+                        <span className="text-2xl font-bold text-blue-800">أنا خبير</span>
                     </button>
                  </div>
             </div>
@@ -857,7 +1020,7 @@ export const GamesSection: React.FC = () => {
     }
 
     const gameDefs = userType === 'kid' ? kidGameDefs : parentGameDefs;
-    const title = userType === 'kid' ? 'ألعاب السكر الممتعة!' : 'ألعاب تعليمية لولي الأمر';
+    const title = userType === 'kid' ? 'ألعاب السكر الممتعة!' : 'ألعاب تعليمية للخبير';
     const subtitle = userType === 'kid' ? 'العب وتعلم واجمع النجوم لتصبح بطل السكري!' : 'طور مهاراتك ومعلوماتك لرعاية أفضل.';
 
     return (
@@ -877,7 +1040,7 @@ export const GamesSection: React.FC = () => {
                             className="inline-flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-6 rounded-full shadow-md hover:bg-blue-600 transition-all duration-300"
                         >
                             <SwitchUserIcon className="w-5 h-5" />
-                            <span>الانتقال إلى قسم ولي الأمر</span>
+                            <span>الانتقال إلى قسم الخبير</span>
                         </button>
                     ) : (
                         <button 
@@ -903,7 +1066,7 @@ export const GamesSection: React.FC = () => {
                             {
                                 {
                                 'catcher': '🍎', 'chooser': '🤔', 'embarrassing': '😅', 'memoryMatch': '🧠', 'sugarBalance': '⚖️', 'starCollector': '🌠',
-                                'dosageCalculator': '🧮', 'symptomSpotter': '⚠️', 'mealPlanner': '🍽️', 'emergencyKit': '🎒'
+                                'dosageCalculator': '🧮', 'symptomSpotter': '⚠️', 'mealPlanner': '🍽️', 'emergencyKit': '🎒', 'mythBusters': '🧐', 'carbCountingPro': '🥗'
                                 }[game.id]
                             }
                            </div>

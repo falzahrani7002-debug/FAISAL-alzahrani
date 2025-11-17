@@ -68,8 +68,8 @@ const ParentsSection: React.FC = () => {
   return (
     <div className="bg-sky-50 py-16 px-4">
       <div className="container mx-auto max-w-4xl">
-        <h2 className="text-4xl font-bold text-center text-sky-800 mb-4">دليل أولياء الأمور</h2>
-        <p className="text-center text-lg text-gray-600 mb-12">أنتم السند الأول لأبطالنا، وهنا تجدون الدعم والمعلومات.</p>
+        <h2 className="text-4xl font-bold text-center text-sky-800 mb-4">قسم ولي الامر</h2>
+        <p className="text-center text-lg text-gray-600 mb-12">أنتم السند الأول لأبطالنا، وهنا تجدون الدعم والمعلومات اللازمة لرعايتهم.</p>
         
         <div className="space-y-8">
           {articles.map((article, index) => (
