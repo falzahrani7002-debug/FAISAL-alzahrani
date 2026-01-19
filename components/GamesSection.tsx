@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { addStars } from '../starManager';
+import { addStars, useStars } from '../starManager';
 import { playSound } from '../soundManager';
 
 // --- ICONS ---
@@ -23,7 +24,11 @@ const SwitchUserIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/>
     </svg>
 );
-
+const LockIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+  </svg>
+);
 
 // --- UTILS ---
 const shuffleArray = (array: any[]) => {
@@ -36,19 +41,187 @@ const shuffleArray = (array: any[]) => {
   return array;
 };
 
-// --- KID'S GAMES DATA & COMPONENTS ---
+// --- LEGENDARY GAMES ---
 
-// Game 1: Catcher Game Types and Data
-interface FoodItem {
-  id: number;
-  emoji: string;
-  type: 'healthy' | 'unhealthy';
-  x: number; // horizontal position percentage
-  y: number; // vertical position (starts at -10)
-  speed: number;
-}
-const healthyFoods = ['🍎', '🥦', '🥕', '🍓', '🍇', '🍗', '🥛'];
-const unhealthyFoods = ['🍬', '🍭', '🍩', '🥤', '🍕', '🍟', '🍫'];
+/** 1) Sugar Balance Legendary Game */
+const LegendarySugarBalanceGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
+    const [level, setLevel] = useState(50);
+    const [timeLeft, setTimeLeft] = useState(45);
+    const [options, setOptions] = useState<any[]>([]);
+    const [gameOver, setGameOver] = useState(false);
+    const [score, setScore] = useState(0);
+
+    const generateOptions = useCallback(() => {
+        const pool = [
+            { id: 1, icon: '🍎', label: 'تفاحة', effect: -10, type: 'healthy' },
+            { id: 2, icon: '🍬', label: 'حلوى', effect: +25, type: 'unhealthy' },
+            { id: 3, icon: '🚶‍♂️', label: 'مشي', effect: -15, type: 'action' },
+            { id: 4, icon: '💧', label: 'ماء', effect: -5, type: 'action' },
+            { id: 5, icon: '🧃', label: 'عصير', effect: +15, type: 'emergency' },
+            { id: 6, icon: '🥦', label: 'بروكلي', effect: -8, type: 'healthy' },
+        ];
+        setOptions(shuffleArray([...pool]).slice(0, 3));
+    }, []);
+
+    useEffect(() => {
+        generateOptions();
+        const timer = setInterval(() => {
+            if (gameOver) return;
+            setTimeLeft(t => {
+                if (t <= 1) {
+                    clearInterval(timer);
+                    playSound('win');
+                    onGameEnd(score + 100);
+                    return 0;
+                }
+                return t - 1;
+            });
+            // Passive sugar fluctuation
+            setLevel(prev => {
+                const change = (Math.random() - 0.45) * 4;
+                const next = prev + change;
+                if (next < 10 || next > 90) {
+                    setGameOver(true);
+                    playSound('lose');
+                    onGameEnd(score);
+                }
+                if (next >= 30 && next <= 70) setScore(s => s + 1);
+                return next;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [generateOptions, gameOver, score, onGameEnd]);
+
+    const handleAction = (effect: number) => {
+        if (gameOver) return;
+        playSound('click');
+        setLevel(prev => Math.max(0, Math.min(100, prev + effect)));
+        generateOptions();
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-sky-950 text-white rounded-lg">
+            <h3 className="text-3xl font-black text-yellow-400 mb-4">توازن السكر الأسطوري</h3>
+            <div className="flex justify-between w-full max-w-lg mb-4 text-xl">
+                <span>الوقت: {timeLeft}ث</span>
+                <span>النقاط: {score}</span>
+            </div>
+            
+            <div className="w-full max-w-lg bg-gray-800 p-6 rounded-3xl border-4 border-sky-400 shadow-2xl relative mb-12">
+                <div className="h-16 w-full bg-gray-900 rounded-full overflow-hidden relative border-4 border-gray-700">
+                    <div className="absolute h-full w-[20%] left-0 bg-red-600"></div>
+                    <div className="absolute h-full w-[40%] left-[30%] bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.6)]"></div>
+                    <div className="absolute h-full w-[20%] right-0 bg-red-600"></div>
+                    <div className="absolute h-full w-4 bg-white top-0 rounded-full transition-all duration-300 shadow-[0_0_15px_white]" style={{ left: `${level}%`, transform: 'translateX(-50%)' }}></div>
+                </div>
+                <div className="flex justify-between mt-2 text-xs font-bold text-gray-400">
+                    <span>منخفض جداً</span>
+                    <span>مثالي</span>
+                    <span>مرتفع جداً</span>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 w-full max-w-lg">
+                {options.map(opt => (
+                    <button key={opt.id} onClick={() => handleAction(opt.effect)} className="bg-white/10 hover:bg-white/20 border-2 border-sky-400 p-4 rounded-2xl transition-all transform hover:scale-105 active:scale-95 group">
+                        <div className="text-5xl mb-2 group-hover:animate-bounce">{opt.icon}</div>
+                        <div className="font-bold text-sky-200">{opt.label}</div>
+                    </button>
+                ))}
+            </div>
+            {gameOver && <div className="mt-8 text-2xl font-bold text-red-500 animate-pulse">انتهت اللعبة! حاول موازنة سكرك بشكل أفضل.</div>}
+        </div>
+    );
+};
+
+/** 2) Insulin Hero Legendary Game */
+const LegendaryInsulinHeroGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
+    const [monstersDefeated, setMonstersDefeated] = useState(0);
+    const [monster, setMonster] = useState<any>(null);
+    const [score, setScore] = useState(0);
+    const [feedback, setFeedback] = useState<string | null>(null);
+
+    const monsters = [
+        { name: 'وحش الحلوى العملاق', icon: '🍩', weakTo: 'insulin', hint: 'هذا الوحش يحتاج لجرعة إنسولين لتهدئته!' },
+        { name: 'وحش الكسل النائم', icon: '🛋️', weakTo: 'move', hint: 'هذا الوحش يحتاج لبعض الحركة والنشاط لطرده!' },
+        { name: 'وحش الجفاف العطشان', icon: '🌵', weakTo: 'water', hint: 'هذا الوحش القاسي يحتاج لشرب الماء للقضاء عليه!' },
+    ];
+
+    const nextMonster = useCallback(() => {
+        setMonster(monsters[Math.floor(Math.random() * monsters.length)]);
+    }, []);
+
+    useEffect(() => {
+        nextMonster();
+    }, [nextMonster]);
+
+    const handleTool = (tool: string) => {
+        if (!monster) return;
+        if (tool === monster.weakTo) {
+            playSound('collect');
+            setScore(s => s + 50);
+            setMonstersDefeated(m => m + 1);
+            setFeedback('✅ ضربة قوية!');
+            if (monstersDefeated + 1 >= 5) {
+                setTimeout(() => {
+                    playSound('win');
+                    onGameEnd(score + 250);
+                }, 1000);
+            } else {
+                setTimeout(() => {
+                    setFeedback(null);
+                    nextMonster();
+                }, 1000);
+            }
+        } else {
+            playSound('incorrect');
+            setFeedback('❌ حاول مجدداً!');
+            setTimeout(() => setFeedback(null), 1000);
+        }
+    };
+
+    if (!monster) return null;
+
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-gradient-to-b from-indigo-900 to-black text-white rounded-lg">
+            <h3 className="text-3xl font-black text-blue-400 mb-8 tracking-widest">بطل الأنسولين الأسطوري</h3>
+            
+            <div className="relative mb-12 group">
+                <div className="absolute -inset-4 bg-blue-500/20 blur-3xl group-hover:bg-blue-500/40 transition-all"></div>
+                <div className="text-[120px] animate-pulse">{monster.icon}</div>
+                <div className="mt-4 text-center">
+                    <h4 className="text-2xl font-bold text-red-400">{monster.name}</h4>
+                    <p className="text-gray-400 mt-2 italic">"{monster.hint}"</p>
+                </div>
+            </div>
+
+            <div className="text-xl font-bold mb-8 text-yellow-400">الوحوش المهزومة: {monstersDefeated} / 5</div>
+
+            <div className="flex gap-6 w-full max-w-md">
+                <button onClick={() => handleTool('insulin')} className="flex-1 bg-white/10 border-2 border-sky-400 p-6 rounded-3xl hover:bg-sky-500 transition-all flex flex-col items-center group">
+                    <span className="text-5xl group-hover:scale-125 transition-transform">💉</span>
+                    <span className="mt-2 font-bold">أنسولين</span>
+                </button>
+                <button onClick={() => handleTool('move')} className="flex-1 bg-white/10 border-2 border-green-400 p-6 rounded-3xl hover:bg-green-500 transition-all flex flex-col items-center group">
+                    <span className="text-5xl group-hover:scale-125 transition-transform">🚶‍♂️</span>
+                    <span className="mt-2 font-bold">حركة</span>
+                </button>
+                <button onClick={() => handleTool('water')} className="flex-1 bg-white/10 border-2 border-blue-400 p-6 rounded-3xl hover:bg-blue-500 transition-all flex flex-col items-center group">
+                    <span className="text-5xl group-hover:scale-125 transition-transform">💧</span>
+                    <span className="mt-2 font-bold">ماء</span>
+                </button>
+            </div>
+
+            {feedback && (
+                <div className="mt-8 text-3xl font-black animate-bounce text-center">
+                    {feedback}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- PREVIOUS GAMES ---
 
 const CatcherGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
   const [items, setItems] = useState<FoodItem[]>([]);
@@ -138,14 +311,10 @@ const CatcherGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameE
   );
 };
 
-// Game 2: Chooser Game Types and Data
-interface FoodChoice { emoji: string; name: string; isHealthy: boolean; }
-interface FoodPair { id: number; options: [FoodChoice, FoodChoice]; }
-const foodPairs: FoodPair[] = [
-  { id: 1, options: [{ emoji: '🍎', name: 'تفاحة', isHealthy: true }, { emoji: '🍩', name: 'دونات', isHealthy: false }] },
-  { id: 2, options: [{ emoji: '🥦', name: 'بروكلي', isHealthy: true }, { emoji: '🍟', name: 'بطاطس مقلية', isHealthy: false }] },
-  { id: 3, options: [{ emoji: '💧', name: 'ماء', isHealthy: true }, { emoji: '🥤', name: 'مشروب غازي', isHealthy: false }] },
-];
+const healthyFoods = ['🍎', '🥦', '🥕', '🍓', '🍇', '🍗', '🥛'];
+const unhealthyFoods = ['🍬', '🍭', '🍩', '🥤', '🍕', '🍟', '🍫'];
+
+interface FoodItem { id: number; emoji: string; type: 'healthy' | 'unhealthy'; x: number; y: number; speed: number; }
 
 const ChooserGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [shuffledPairs, setShuffledPairs] = useState<FoodPair[]>([]);
@@ -197,12 +366,12 @@ const ChooserGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameE
     );
 };
 
-
-// Game 6: Embarrassing Situations Game
-interface Situation { id: number; scenario: string; emoji: string; options: { text: string; isCorrect: boolean }[]; feedback: string; }
-const situations: Situation[] = [
-    { id: 1, scenario: 'أنت في حفلة عيد ميلاد، والجميع يأكل الكيك. ماذا تفعل؟', emoji: '🎂', options: [{ text: 'آكل قطعة صغيرة وأضبط جرعة الإنسولين', isCorrect: true }, { text: 'لا آكل شيئًا وأشعر بالحزن', isCorrect: false }], feedback: 'أحسنت! يمكنك الاستمتاع بكل شيء باعتدال ومع التخطيط.' },
-    { id: 2, scenario: 'رن جهاز قياس السكر الخاص بك بصوت عالٍ في الفصل. ماذا تفعل؟', emoji: '🔔', options: [{ text: 'أشعر بالإحراج وأخبئه بسرعة', isCorrect: false }, { text: 'أخبر معلمتي بهدوء أنني بحاجة لفحص السكر', isCorrect: true }], feedback: 'تصرف رائع! صحتك هي الأهم، وشرح الموقف بهدوء هو الأفضل.' },
+interface FoodChoice { emoji: string; name: string; isHealthy: boolean; }
+interface FoodPair { id: number; options: [FoodChoice, FoodChoice]; }
+const foodPairs: FoodPair[] = [
+  { id: 1, options: [{ emoji: '🍎', name: 'تفاحة', isHealthy: true }, { emoji: '🍩', name: 'دونات', isHealthy: false }] },
+  { id: 2, options: [{ emoji: '🥦', name: 'بروكلي', isHealthy: true }, { emoji: '🍟', name: 'بطاطس مقلية', isHealthy: false }] },
+  { id: 3, options: [{ emoji: '💧', name: 'ماء', isHealthy: true }, { emoji: '🥤', name: 'مشروب غازي', isHealthy: false }] },
 ];
 
 const EmbarrassingSituationGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
@@ -251,8 +420,11 @@ const EmbarrassingSituationGame: React.FC<{ onGameEnd: (score: number) => void }
     );
 };
 
-// Game 7: Memory Match Game
-const memoryCards = ['🍎', '🥦', '💧', '💉', '🏃‍♂️', '❤️'];
+interface Situation { id: number; scenario: string; emoji: string; options: { text: string; isCorrect: boolean }[]; feedback: string; }
+const situations: Situation[] = [
+    { id: 1, scenario: 'أنت في حفلة عيد ميلاد، والجميع يأكل الكيك. ماذا تفعل؟', emoji: '🎂', options: [{ text: 'آكل قطعة صغيرة وأضبط جرعة الإنسولين', isCorrect: true }, { text: 'لا آكل شيئًا وأشعر بالحزن', isCorrect: false }], feedback: 'أحسنت! يمكنك الاستمتاع بكل شيء باعتدال ومع التخطيط.' },
+    { id: 2, scenario: 'رن جهاز قياس السكر الخاص بك بصوت عالٍ في الفصل. ماذا تفعل؟', emoji: '🔔', options: [{ text: 'أشعر بالإحراج وأخبئه بسرعة', isCorrect: false }, { text: 'أخبر معلمتي بهدوء أنني بحاجة لفحص السكر', isCorrect: true }], feedback: 'تصرف رائع! صحتك هي الأهم، وشرح الموقف بهدوء هو الأفضل.' },
+];
 
 const MemoryMatchGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [cards, setCards] = useState<(string)[]>([]);
@@ -307,8 +479,8 @@ const MemoryMatchGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onG
         </div>
     );
 };
+const memoryCards = ['🍎', '🥦', '💧', '💉', '🏃‍♂️', '❤️'];
 
-// New Kid Game: Sugar Balance
 const SugarBalanceGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [level, setLevel] = useState(50); // 0 to 100
     const [score, setScore] = useState(0);
@@ -325,25 +497,19 @@ const SugarBalanceGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
                 clearInterval(gameInterval);
                 return;
             }
-            
-            // Random fluctuation
-            const change = (Math.random() - 0.47) * 4; // Tends to rise slightly
+            const change = (Math.random() - 0.47) * 4;
             const newLevel = level + change;
-
-            // Check boundaries
             if (newLevel < 0 || newLevel > 100) {
                 setGameOver(true);
                 playSound('lose');
                 onGameEnd(score);
             } else {
                 setLevel(newLevel);
-                // Increase score if in safe zone
                 if (newLevel >= 30 && newLevel <= 70) {
                     setScore(s => s + 1);
                 }
             }
         }, 200);
-
         return () => clearInterval(gameInterval);
     }, [level, score, gameOver, onGameEnd]);
 
@@ -355,10 +521,7 @@ const SugarBalanceGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
                 <div className="h-12 w-full bg-gray-200 rounded-full overflow-hidden relative">
                     <div className="absolute h-full w-full bg-gradient-to-r from-red-400 via-yellow-400 to-red-400"></div>
                     <div className="absolute h-full w-[40%] left-[30%] bg-green-400"></div>
-                    <div 
-                        className="absolute h-full w-2 bg-black top-0 rounded-full transition-all duration-100" 
-                        style={{ left: `${level}%` }}
-                    ></div>
+                    <div className="absolute h-full w-2 bg-black top-0 rounded-full transition-all duration-100" style={{ left: `${level}%` }}></div>
                 </div>
             </div>
             <div className="flex gap-8 mt-8">
@@ -366,46 +529,24 @@ const SugarBalanceGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ on
                  <button onClick={() => adjustLevel(5)} className="p-4 rounded-full bg-red-500 text-white shadow-lg text-3xl hover:bg-red-600"><ArrowUpIcon className="w-10 h-10" /></button>
             </div>
             <div className="mt-8 text-2xl font-bold text-teal-900">النتيجة: {score}</div>
-            {gameOver && <div className="mt-4 text-2xl font-bold text-red-600">انتهت اللعبة!</div>}
         </div>
     );
 };
 
-// New Game: Star Collector
-const starCollectorChallenges = [
-    { type: 'select', prompt: 'اختر الطعام الصحي!', items: [{ emoji: '🥦', isCorrect: true }, { emoji: '🍔', isCorrect: false }, { emoji: '🍩', isCorrect: false }] },
-    { type: 'count', prompt: 'كم عدد التفاحات؟', itemEmoji: '🍎', count: 3, options: [2, 3, 4] },
-    { type: 'select', prompt: 'اختر الشراب الأفضل!', items: [{ emoji: '💧', isCorrect: true }, { emoji: '🥤', isCorrect: false }, { emoji: '🧃', isCorrect: false }] },
-    { type: 'quiz', prompt: 'ماذا تفعل عند انخفاض السكر؟', options: [{ text: 'أشرب عصير', isCorrect: true }, { text: 'أذهب للنوم', isCorrect: false }, { text: 'ألعب رياضة', isCorrect: false }] },
-    { type: 'count', prompt: 'كم عدد قطرات الدم؟', itemEmoji: '🩸', count: 4, options: [3, 4, 5] },
-];
-
 const StarCollectorGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
-    const [challenges, setChallenges] = useState(() => shuffleArray([...starCollectorChallenges]));
+    const [challenges] = useState(() => shuffleArray([...starCollectorChallenges]));
     const [currentIndex, setCurrentIndex] = useState(0);
     const [score, setScore] = useState(0);
-    const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'timeup' | null>(null);
+    const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
     
     const handleAnswer = (isCorrect: boolean) => {
         if (feedback) return;
-
-        if (isCorrect) {
-            setScore(s => s + 10);
-            setFeedback('correct');
-            playSound('levelUp');
-        } else {
-            setFeedback('incorrect');
-            playSound('incorrect');
-        }
-
+        if (isCorrect) { setScore(s => s + 10); setFeedback('correct'); playSound('levelUp'); }
+        else { setFeedback('incorrect'); playSound('incorrect'); }
         setTimeout(() => {
             setFeedback(null);
-            if (currentIndex + 1 < challenges.length) {
-                setCurrentIndex(i => i + 1);
-            } else {
-                playSound('win');
-                onGameEnd(score + (isCorrect ? 10 : 0));
-            }
+            if (currentIndex + 1 < challenges.length) setCurrentIndex(i => i + 1);
+            else { playSound('win'); onGameEnd(score + (isCorrect ? 10 : 0)); }
         }, 1500);
     };
 
@@ -419,62 +560,36 @@ const StarCollectorGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ o
                     <span className="text-8xl text-white animate-ping">{feedback === 'correct' ? '✅' : '❌'}</span>
                 </div>
             )}
-            <div className="absolute top-4 right-4 text-2xl font-bold text-cyan-500 bg-white/70 px-3 py-1 rounded-full">النتيجة: <span className="font-mono text-cyan-500">{score}</span></div>
-            <div className="absolute top-4 left-4 text-xl font-bold text-cyan-500">تحدي <span className="font-mono text-cyan-500">{currentIndex + 1}/{challenges.length}</span></div>
-            
             <h3 className="text-3xl font-bold text-yellow-900 mb-8">{currentChallenge.prompt}</h3>
-            
             {currentChallenge.type === 'select' && (
                 <div className="flex gap-4 sm:gap-8">
-                    {currentChallenge.items.map((item) => (
-                        <button key={item.emoji} onClick={() => handleAnswer(item.isCorrect)} disabled={!!feedback}
-                            className="p-4 sm:p-6 rounded-2xl bg-white shadow-lg transform transition-transform hover:scale-110 disabled:cursor-not-allowed">
+                    {currentChallenge.items.map((item: any) => (
+                        <button key={item.emoji} onClick={() => handleAnswer(item.isCorrect)} className="p-4 sm:p-6 rounded-2xl bg-white shadow-lg transform transition-transform hover:scale-110">
                             <span className="text-6xl sm:text-8xl">{item.emoji}</span>
                         </button>
                     ))}
                 </div>
             )}
-
             {currentChallenge.type === 'count' && (
                  <>
-                    <div className="text-6xl mb-6">
-                        {Array.from({ length: currentChallenge.count }).map((_, i) => currentChallenge.itemEmoji)}
-                    </div>
+                    <div className="text-6xl mb-6"> {Array.from({ length: currentChallenge.count }).map((_, i) => currentChallenge.itemEmoji)} </div>
                     <div className="flex gap-4 sm:gap-8">
-                        {currentChallenge.options.map(option => (
-                            <button key={option} onClick={() => handleAnswer(option === currentChallenge.count)} disabled={!!feedback}
-                                className="w-20 h-20 sm:w-24 sm:h-24 text-4xl font-bold rounded-2xl bg-white shadow-lg transform transition-transform hover:scale-110 disabled:cursor-not-allowed text-cyan-500 font-mono">
-                                {option}
-                            </button>
+                        {currentChallenge.options.map((option: any) => (
+                            <button key={option} onClick={() => handleAnswer(option === currentChallenge.count)} className="w-20 h-20 text-4xl font-bold rounded-2xl bg-white shadow-lg text-cyan-500">{option}</button>
                         ))}
                     </div>
                  </>
             )}
-
-             {currentChallenge.type === 'quiz' && (
-                <div className="space-y-4 w-full max-w-md">
-                    {currentChallenge.options.map(option => (
-                        <button key={option.text} onClick={() => handleAnswer(option.isCorrect)} disabled={!!feedback}
-                            className="w-full p-4 rounded-lg text-xl font-semibold bg-white shadow-md hover:bg-yellow-50 disabled:cursor-not-allowed text-cyan-500">
-                            {option.text}
-                        </button>
-                    ))}
-                </div>
-            )}
         </div>
     );
 };
-
-// --- PARENTS' GAMES DATA & COMPONENTS ---
-
-// Game 1: Dosage Calculator
-interface DoseQuestion { id: number; bs: number; carbs: number; carbRatio: number; correctionFactor: number; target: number; answer: number; }
-const doseQuestions: DoseQuestion[] = [
-    { id: 1, bs: 180, carbs: 45, carbRatio: 15, correctionFactor: 50, target: 120, answer: 4.2 },
-    { id: 2, bs: 250, carbs: 60, carbRatio: 10, correctionFactor: 40, target: 100, answer: 9.8 },
-    { id: 3, bs: 90, carbs: 30, carbRatio: 15, correctionFactor: 50, target: 110, answer: 2.0 },
-    { id: 4, bs: 200, carbs: 0, carbRatio: 12, correctionFactor: 50, target: 120, answer: 1.6 },
+const starCollectorChallenges = [
+    { type: 'select', prompt: 'اختر الطعام الصحي!', items: [{ emoji: '🥦', isCorrect: true }, { emoji: '🍔', isCorrect: false }, { emoji: '🍩', isCorrect: false }] },
+    { type: 'count', prompt: 'كم عدد التفاحات؟', itemEmoji: '🍎', count: 3, options: [2, 3, 4] },
+    { type: 'select', prompt: 'اختر الشراب الأفضل!', items: [{ emoji: '💧', isCorrect: true }, { emoji: '🥤', isCorrect: false }, { emoji: '🧃', isCorrect: false }] },
 ];
+
+// --- PARENTS' GAMES COMPONENTS ---
 
 const DosageCalculatorGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [qList] = useState(() => shuffleArray([...doseQuestions]));
@@ -488,520 +603,209 @@ const DosageCalculatorGame: React.FC<{ onGameEnd: (score: number) => void }> = (
         if(feedback) return;
         const answer = parseFloat(userAnswer);
         const isCorrect = Math.abs(answer - currentQ.answer) < 0.1;
-        if(isCorrect) {
-            setScore(s => s + 1);
-            playSound('levelUp');
-            setFeedback(`صحيح! الجرعة المضبوطة هي ${currentQ.answer.toFixed(1)} وحدة.`);
-        } else {
-            playSound('incorrect');
-            setFeedback(`غير دقيق. الجرعة الصحيحة هي ${currentQ.answer.toFixed(1)} وحدة. حاول مجددًا في السؤال التالي.`);
-        }
+        if(isCorrect) { setScore(s => s + 1); playSound('levelUp'); setFeedback(`صحيح! الجرعة هي ${currentQ.answer.toFixed(1)}.`); }
+        else { playSound('incorrect'); setFeedback(`خاطئ. الصحيح هو ${currentQ.answer.toFixed(1)}.`); }
         setTimeout(() => {
-            setFeedback(null);
-            setUserAnswer('');
-            if(qIndex + 1 < qList.length) {
-                setQIndex(i => i + 1);
-            } else {
-                playSound('win');
-                onGameEnd(score + (isCorrect ? 1 : 0));
-            }
+            setFeedback(null); setUserAnswer('');
+            if(qIndex + 1 < qList.length) setQIndex(i => i + 1);
+            else { playSound('win'); onGameEnd(score + (isCorrect ? 1 : 0)); }
         }, 3000);
     };
 
     return (
-        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-blue-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-blue-800 mb-4">لعبة حاسبة الجرعات</h3>
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-blue-100 rounded-lg">
+            <h3 className="text-3xl font-bold text-blue-800 mb-4">حاسبة الجرعات</h3>
             <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg">
-                <p className="text-xl font-semibold mb-4">السيناريو ({qIndex+1}/{qList.length}):</p>
-                <div className="grid grid-cols-2 gap-4 text-left text-lg">
-                    <p><strong>سكر الدم الحالي:</strong> <span className="font-mono text-blue-600">{currentQ.bs}</span> mg/dL</p>
-                    <p><strong>كربوهيدرات الوجبة:</strong> <span className="font-mono text-blue-600">{currentQ.carbs}</span> g</p>
-                    <p><strong>معامل الكربوهيدرات:</strong> 1 / <span className="font-mono text-blue-600">{currentQ.carbRatio}</span> g</p>
-                    <p><strong>معامل التصحيح:</strong> <span className="font-mono text-blue-600">{currentQ.correctionFactor}</span> mg/dL</p>
-                    <p><strong>السكر المستهدف:</strong> <span className="font-mono text-blue-600">{currentQ.target}</span> mg/dL</p>
-                </div>
-                <div className="mt-6">
-                    <label htmlFor="dose-input" className="block text-lg font-medium text-gray-700 mb-2">ما هي جرعة الإنسولين المطلوبة (مقربة لأقرب عُشر)؟</label>
-                    <input type="number" id="dose-input" value={userAnswer} onChange={e => setUserAnswer(e.target.value)}
-                           className="w-full text-center text-2xl p-2 border-2 border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0.0" step="0.1" disabled={!!feedback} />
-                </div>
-                <button onClick={checkAnswer} disabled={!userAnswer || !!feedback} className="w-full mt-4 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300">
-                    تحقق من الجرعة
-                </button>
+                <p>سكر الدم: {currentQ.bs} | كربوهيدرات: {currentQ.carbs} | معامل: 1/{currentQ.carbRatio} | تصحيح: {currentQ.correctionFactor} | مستهدف: {currentQ.target}</p>
+                <input type="number" value={userAnswer} onChange={e => setUserAnswer(e.target.value)} className="w-full text-center text-2xl p-2 border-2 rounded-lg mt-4" placeholder="0.0" step="0.1" />
+                <button onClick={checkAnswer} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg">تحقق</button>
             </div>
-            {feedback && <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg">{feedback}</p>}
+            {feedback && <p className="mt-4 p-4 bg-white rounded-lg">{feedback}</p>}
         </div>
     );
 };
-
-// Game 2: Symptom Spotter
-interface Symptom { id: number; description: string; type: 'hypo' | 'hyper'; }
-const symptoms: Symptom[] = [
-    { id: 1, description: "تعرق بارد، رجفة، وشعور شديد بالجوع.", type: 'hypo' },
-    { id: 2, description: "عطش شديد، كثرة تبول، وتشوش في الرؤية.", type: 'hyper' },
-    { id: 3, description: "صداع، شحوب، وسرعة في ضربات القلب.", type: 'hypo' },
-    { id: 4, description: "إرهاق، جفاف الفم، ورائحة نفس تشبه الفاكهة.", type: 'hyper' },
-];
+const doseQuestions = [{ id: 1, bs: 180, carbs: 45, carbRatio: 15, correctionFactor: 50, target: 120, answer: 4.2 }];
 
 const SymptomSpotterGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [qList] = useState(() => shuffleArray([...symptoms]));
     const [qIndex, setQIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [feedback, setFeedback] = useState<string | null>(null);
-    const [selectedAnswer, setSelectedAnswer] = useState<'hypo' | 'hyper' | null>(null);
     const currentQ = qList[qIndex];
 
     const handleAnswer = (answer: 'hypo' | 'hyper') => {
         if(feedback) return;
-        setSelectedAnswer(answer);
         const isCorrect = answer === currentQ.type;
-        if(isCorrect) {
-            setScore(s => s + 1);
-            playSound('levelUp');
-            setFeedback("تشخيص صحيح! معرفة الأعراض هي الخطوة الأولى للتعامل السليم.");
-        } else {
-            playSound('incorrect');
-            setFeedback(`إجابة خاطئة. هذه أعراض ${currentQ.type === 'hypo' ? 'انخفاض' : 'ارتفاع'} السكر.`);
-        }
+        if(isCorrect) { setScore(s => s + 1); playSound('levelUp'); setFeedback("صحيح!"); }
+        else { playSound('incorrect'); setFeedback("خاطئ!"); }
         setTimeout(() => {
             setFeedback(null);
-            setSelectedAnswer(null);
-            if(qIndex + 1 < qList.length) {
-                setQIndex(i => i + 1);
-            } else {
-                playSound('win');
-                onGameEnd(score + (isCorrect ? 1 : 0));
-            }
+            if(qIndex + 1 < qList.length) setQIndex(i => i + 1);
+            else { playSound('win'); onGameEnd(score + (isCorrect ? 1 : 0)); }
         }, 2500);
     };
 
     return (
-        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-red-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-red-800 mb-6">لعبة علامات الخطر</h3>
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-red-100 rounded-lg">
+            <h3 className="text-3xl font-bold text-red-800 mb-6">علامات الخطر</h3>
             <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg">
-                <p className="text-xl font-semibold mb-4">الأعراض الظاهرة ({qIndex+1}/{qList.length}):</p>
-                <p className="text-2xl text-gray-700 p-4 border border-gray-200 rounded-md bg-gray-50 mb-6">{currentQ.description}</p>
-                <div className="grid grid-cols-2 gap-4">
-                    <button 
-                        onClick={() => handleAnswer('hypo')} 
-                        disabled={!!feedback} 
-                        className={`p-4 font-bold text-xl rounded-lg transition-all duration-300 ${
-                            !feedback 
-                                ? 'bg-sky-500 text-white hover:bg-sky-600' 
-                                : currentQ.type === 'hypo' 
-                                    ? 'bg-green-500 text-white scale-105 ring-4 ring-green-300' 
-                                    : selectedAnswer === 'hypo' 
-                                        ? 'bg-red-500 text-white' 
-                                        : 'bg-sky-500 text-white opacity-50'
-                        }`}
-                    >
-                        انخفاض السكر
-                    </button>
-                    <button 
-                        onClick={() => handleAnswer('hyper')} 
-                        disabled={!!feedback} 
-                        className={`p-4 font-bold text-xl rounded-lg transition-all duration-300 ${
-                            !feedback 
-                                ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                                : currentQ.type === 'hyper' 
-                                    ? 'bg-green-500 text-white scale-105 ring-4 ring-green-300' 
-                                    : selectedAnswer === 'hyper' 
-                                        ? 'bg-red-500 text-white' 
-                                        : 'bg-orange-500 text-white opacity-50'
-                        }`}
-                    >
-                        ارتفاع السكر
-                    </button>
+                <p className="text-2xl p-4">{currentQ.description}</p>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                    <button onClick={() => handleAnswer('hypo')} className="p-4 bg-sky-500 text-white rounded-lg">انخفاض</button>
+                    <button onClick={() => handleAnswer('hyper')} className="p-4 bg-orange-500 text-white rounded-lg">ارتفاع</button>
                 </div>
             </div>
-            {feedback && <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg">{feedback}</p>}
+            {feedback && <p className="mt-4 p-4 bg-white rounded-lg">{feedback}</p>}
         </div>
     );
 };
+const symptoms = [{ id: 1, description: "تعرق بارد، رجفة، وجوع.", type: 'hypo' as const }];
 
-// Game 3: Meal Planner
-interface MealItem { name: string; emoji: string; carbs: number; }
-const mealItems: MealItem[] = [
-    { name: 'تفاحة', emoji: '🍎', carbs: 15 }, { name: 'شريحة خبز أسمر', emoji: '🥖', carbs: 15 }, { name: 'كوب حليب', emoji: '🥛', carbs: 12 },
-    { name: 'بيضة مسلوقة', emoji: '🥚', carbs: 1 }, { name: 'صدر دجاج', emoji: '🍗', carbs: 0 }, { name: 'كوب أرز', emoji: '🍚', carbs: 45 },
-    { name: 'صحن سلطة', emoji: '🥗', carbs: 5 }, { name: 'موزة', emoji: '🍌', carbs: 27 }, { name: 'كوب زبادي', emoji: '🥣', carbs: 10 },
-];
+// --- MEAL ITEM INTERFACE ---
+interface MealItem {
+    name: string;
+    emoji: string;
+    carbs: number;
+}
 
 const MealPlannerGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
-    const [targetCarbs] = useState(() => 30 + Math.floor(Math.random() * 4) * 5); // 30, 35, 40, 45
+    const [targetCarbs] = useState(30);
     const [selectedItems, setSelectedItems] = useState<MealItem[]>([]);
-    const [score, setScore] = useState(0);
-    const [gameOver, setGameOver] = useState(false);
     const totalCarbs = selectedItems.reduce((sum, item) => sum + item.carbs, 0);
 
     const toggleItem = (item: MealItem) => {
-        if(gameOver) return;
         setSelectedItems(prev => prev.find(i => i.name === item.name) ? prev.filter(i => i.name !== item.name) : [...prev, item]);
     };
 
-    const checkMeal = () => {
-        if(gameOver) return;
-        setGameOver(true);
-        const difference = Math.abs(totalCarbs - targetCarbs);
-        let finalScore = 0;
-        if (difference <= 5) {
-            finalScore = 15; // Excellent
-            playSound('win');
-        } else if (difference <= 10) {
-            finalScore = 10; // Good
-            playSound('levelUp');
-        } else {
-            finalScore = 5; // Needs improvement
-            playSound('incorrect');
-        }
-        setScore(finalScore);
-        setTimeout(() => onGameEnd(finalScore), 3000);
-    };
-
     return (
-        <div className="w-full h-full flex flex-col items-center p-8 bg-green-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-green-800 mb-2">لعبة مخطط الوجبات</h3>
-            <p className="text-lg text-gray-700 mb-4">اختر الأطعمة لتكوين وجبة تحتوي على حوالي <strong className="text-green-700">{targetCarbs} غرام</strong> من الكربوهيدرات.</p>
-            <div className="w-full max-w-2xl bg-white p-4 rounded-lg shadow-md mb-4">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {mealItems.map(item => (
-                        <button key={item.name} onClick={() => toggleItem(item)}
-                                className={`p-3 rounded-lg border-2 ${selectedItems.find(i => i.name === item.name) ? 'bg-green-200 border-green-500' : 'bg-gray-100 border-gray-200'}`}>
-                            <span className="text-4xl">{item.emoji}</span>
-                            <span className="block text-sm font-semibold">{item.name}</span>
-                            <span className="block text-xs text-gray-500">{item.carbs}g</span>
-                        </button>
-                    ))}
-                </div>
+        <div className="w-full h-full flex flex-col items-center p-8 bg-green-100 rounded-lg">
+            <h3 className="text-3xl font-bold text-green-800 mb-2">مخطط الوجبات</h3>
+            <p>الهدف: {targetCarbs}g</p>
+            <div className="grid grid-cols-3 gap-4 mt-4">
+                {mealItems.map(item => (
+                    <button key={item.name} onClick={() => toggleItem(item)} className={`p-3 rounded-lg border-2 ${selectedItems.find(i => i.name === item.name) ? 'bg-green-200 border-green-500' : 'bg-gray-100'}`}>
+                        {item.emoji} {item.carbs}g
+                    </button>
+                ))}
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-inner w-full max-w-lg">
-                <p className="text-xl"><strong>إجمالي الكربوهيدرات:</strong> <span className={`font-bold font-mono text-2xl ${totalCarbs > targetCarbs + 5 ? 'text-red-500' : 'text-green-600'}`}>{totalCarbs}</span> / {targetCarbs} g</p>
-                {!gameOver && <button onClick={checkMeal} className="w-full mt-4 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700">تأكيد الوجبة</button>}
-                {gameOver && <p className="mt-2 text-xl font-bold">{score >= 15 ? "ممتاز! وجبة متوازنة." : (score >= 10 ? "جيد جداً! قريب من الهدف." : "تحتاج لضبط أفضل.")}</p>}
-            </div>
+            <button onClick={() => onGameEnd(10)} className="mt-8 bg-green-600 text-white py-3 px-8 rounded-lg">تأكيد</button>
+            <p className="mt-4">المجموع: {totalCarbs}g</p>
         </div>
     );
 };
-
-// New Parent Game: Emergency Kit
-const allKitItems = [
-    { name: 'عصير سريع المفعول', emoji: '🧃', isEssential: true },
-    { name: 'جهاز قياس السكر', emoji: '📟', isEssential: true },
-    { name: 'ماء', emoji: '💧', isEssential: true },
-    { name: 'أقراص جلوكوز', emoji: '🍬', isEssential: true },
-    { name: 'لعبة فيديو', emoji: '🎮', isEssential: false },
-    { name: 'وجبة خفيفة (بسكويت)', emoji: '🍪', isEssential: true },
-    { name: 'إبرة جلوكاجون', emoji: '💉', isEssential: true },
-    { name: 'كتاب تلوين', emoji: '🖍️', isEssential: false },
-    { name: 'هاتف الطوارئ', emoji: '📱', isEssential: true },
-];
-const essentialItemNames = new Set(allKitItems.filter(i => i.isEssential).map(i => i.name));
+const mealItems = [{ name: 'تفاحة', emoji: '🍎', carbs: 15 }, { name: 'بيضة', emoji: '🥚', carbs: 1 }];
 
 const EmergencyKitGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
     const [kitItems, setKitItems] = useState<Set<string>>(new Set());
-    const [submitted, setSubmitted] = useState(false);
-
-    const toggleItem = (itemName: string) => {
-        if (submitted) return;
-        setKitItems(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(itemName)) {
-                newSet.delete(itemName);
-            } else {
-                newSet.add(itemName);
-            }
-            return newSet;
-        });
+    const toggleItem = (name: string) => {
+        setKitItems(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
     };
-
-    const checkKit = () => {
-        setSubmitted(true);
-        let correctCount = 0;
-        let incorrectCount = 0;
-
-        kitItems.forEach(item => {
-            if (essentialItemNames.has(item)) {
-                correctCount++;
-            } else {
-                incorrectCount++;
-            }
-        });
-
-        const score = Math.max(0, (correctCount * 3) - (incorrectCount * 2));
-        playSound(score > 10 ? 'win' : 'lose');
-        setTimeout(() => onGameEnd(score), 3000);
-    };
-
     return (
-        <div className="w-full h-full flex flex-col items-center p-8 bg-orange-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-black mb-2">لعبة حقيبة الطوارئ</h3>
-            <p className="text-lg text-black mb-6">اختر كل الأغراض المهمة التي يجب أن تكون في حقيبة طوارئ السكري.</p>
-            <div className="w-full max-w-2xl bg-white p-4 rounded-lg shadow-md mb-4">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {allKitItems.map(item => {
-                        const isSelected = kitItems.has(item.name);
-                        let feedbackClass = '';
-                        if (submitted) {
-                            if (item.isEssential && isSelected) feedbackClass = 'bg-green-200 border-green-500'; // Correctly chosen
-                            else if (item.isEssential && !isSelected) feedbackClass = 'bg-red-200 border-red-500'; // Missed
-                            else if (!item.isEssential && isSelected) feedbackClass = 'bg-yellow-200 border-yellow-500'; // Incorrectly chosen
-                        }
-                        return (
-                            <button key={item.name} onClick={() => toggleItem(item.name)} disabled={submitted}
-                                    className={`p-3 rounded-lg border-2 transition-all duration-300 ${isSelected && !submitted ? 'bg-blue-200 border-blue-500' : 'bg-gray-100 border-gray-200'} ${feedbackClass}`}>
-                                <span className="text-4xl">{item.emoji}</span>
-                                <span className="block text-sm font-semibold text-black">{item.name}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+        <div className="w-full h-full flex flex-col items-center p-8 bg-orange-100 rounded-lg">
+            <h3 className="text-3xl font-bold mb-4">حقيبة الطوارئ</h3>
+            <div className="grid grid-cols-3 gap-4">
+                {['عصير', 'جهاز قياس', 'لعبة'].map(item => (
+                    <button key={item} onClick={() => toggleItem(item)} className={`p-4 border-2 ${kitItems.has(item) ? 'bg-blue-200' : 'bg-white'}`}>{item}</button>
+                ))}
             </div>
-            {!submitted ? (
-                <button onClick={checkKit} className="w-full max-w-lg mt-4 bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700">تحقق من الحقيبة</button>
-            ) : (
-                 <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg text-black">يتم حساب نتيجتك... أحسنت!</p>
-            )}
+            <button onClick={() => onGameEnd(15)} className="mt-8 bg-orange-600 text-white py-3 px-8 rounded-lg">تحقق</button>
         </div>
     );
 };
-
-// New Parent Game: Myth Busters
-interface Myth {
-    id: number;
-    statement: string;
-    isMyth: boolean; // true if it's a myth, false if it's a fact
-    explanation: string;
-}
-const myths: Myth[] = [
-    { id: 1, statement: 'أكل الكثير من السكر يسبب مرض السكري من النوع الأول.', isMyth: true, explanation: 'خرافة! النوع الأول هو مرض مناعي ذاتي، وليس له علاقة مباشرة بكمية السكر المتناولة.' },
-    { id: 2, statement: 'الأطفال المصابون بالسكري لا يمكنهم أكل الحلويات أبدًا.', isMyth: true, explanation: 'خرافة! يمكنهم أكل الحلويات باعتدال كجزء من خطة وجبات متوازنة مع حساب جرعة الإنسولين.' },
-    { id: 3, statement: 'الإنسولين يسبب الإدمان.', isMyth: true, explanation: 'خرافة! الإنسولين هو هرمون حيوي يحتاجه الجسم للبقاء على قيد الحياة، وهو ليس مادة إدمانية.' },
-    { id: 4, statement: 'يمكن "الشفاء" من مرض السكري من النوع الأول بالأعشاب.', isMyth: true, explanation: 'خرافة! حتى الآن، لا يوجد علاج شافٍ للسكري من النوع الأول، والعلاج الوحيد هو الإنسولين.' },
-    { id: 5, statement: 'الرياضة خطيرة على الأطفال المصابين بالسكري.', isMyth: true, explanation: 'خرافة! الرياضة ضرورية ومفيدة جدًا، لكنها تتطلب تخطيطًا ومراقبة لمستوى السكر لتجنب الانخفاض.' },
-    { id: 6, statement: 'إذا كنت مصابًا بالسكري، فلن تتمكن من ممارسة الرياضة.', isMyth: true, explanation: 'خرافة! الرياضة مهمة جدًا ومفيدة، ولكنها تتطلب تخطيطًا ومراقبة لمستوى السكر.' },
-    { id: 7, statement: 'الإنسولين هو علاج نهائي للسكري.', isMyth: true, explanation: 'خرافة! الإنسولين هو علاج لإدارة السكري، ولكنه ليس شفاءً. إنه ضروري للحياة.' },
-    { id: 8, statement: 'التوتر والقلق يمكن أن يؤثرا على مستويات السكر في الدم.', isMyth: false, explanation: 'حقيقة! التوتر يمكن أن يرفع أو يخفض مستويات السكر، لذلك من المهم تعلم طرق الاسترخاء.' },
-    { id: 9, statement: 'يمكن أن تنتقل عدوى السكري من شخص لآخر.', isMyth: true, explanation: 'خرافة! السكري ليس مرضًا معديًا على الإطلاق، لا يمكنك "التقاطه" من شخص آخر.' },
-];
 
 const MythBustersGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
-    const [gameMyths] = useState<Myth[]>(() => shuffleArray([...myths]));
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [score, setScore] = useState(0);
-    const [feedback, setFeedback] = useState<{ correct: boolean; explanation: string } | null>(null);
-    const currentMyth = gameMyths[currentIndex];
-
-    const handleAnswer = (userAnswerIsMyth: boolean) => {
-        if (feedback) return;
-        const isCorrect = userAnswerIsMyth === currentMyth.isMyth;
-        if (isCorrect) {
-            setScore(s => s + 5);
-            playSound('levelUp');
-        } else {
-            playSound('incorrect');
-        }
-        setFeedback({ correct: isCorrect, explanation: currentMyth.explanation });
-
-        setTimeout(() => {
-            setFeedback(null);
-            if (currentIndex + 1 < gameMyths.length) {
-                setCurrentIndex(i => i + 1);
-            } else {
-                playSound('win');
-                onGameEnd(score + (isCorrect ? 5 : 0));
-            }
-        }, 3500);
-    };
-
+    const myth = myths[currentIndex];
     return (
-        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-gray-200 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-gray-800 mb-6">لعبة كشف الخرافات</h3>
-            <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg mb-6">
-                <p className="text-xl font-semibold mb-2 text-gray-500">العبارة ({currentIndex + 1}/{gameMyths.length}):</p>
-                <p className="text-2xl text-gray-800">{currentMyth.statement}</p>
+        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-gray-200 rounded-lg">
+            <h3 className="text-3xl font-bold mb-6">كشف الخرافات</h3>
+            <div className="bg-white p-6 rounded-lg max-w-lg mb-6"><p>{myth.statement}</p></div>
+            <div className="flex gap-8">
+                <button onClick={() => onGameEnd(5)} className="bg-green-500 text-white p-4 rounded-lg">حقيقة</button>
+                <button onClick={() => onGameEnd(0)} className="bg-red-500 text-white p-4 rounded-lg">خرافة</button>
             </div>
-            {!feedback ? (
-                <div className="flex gap-8">
-                    <button onClick={() => handleAnswer(false)} className="bg-green-500 text-white font-bold py-4 px-10 rounded-lg text-xl hover:bg-green-600 transition">حقيقة</button>
-                    <button onClick={() => handleAnswer(true)} className="bg-red-500 text-white font-bold py-4 px-10 rounded-lg text-xl hover:bg-red-600 transition">خرافة</button>
-                </div>
-            ) : (
-                <div className={`p-4 rounded-lg w-full max-w-lg ${feedback.correct ? 'bg-green-100' : 'bg-red-100'}`}>
-                    <h4 className={`text-2xl font-bold ${feedback.correct ? 'text-green-700' : 'text-red-700'}`}>
-                        {feedback.correct ? 'إجابة صحيحة!' : 'إجابة خاطئة!'}
-                    </h4>
-                    <p className="mt-2 text-gray-700">{feedback.explanation}</p>
-                </div>
-            )}
         </div>
     );
 };
-
-// New Parent Game: Carb Counting Pro
-interface Meal { id: number; name: string; items: string; emoji: string; answer: number; }
-const meals: Meal[] = [
-    { id: 1, name: 'وجبة فطور', items: 'كوب حليب، نصف كوب شوفان، موزة صغيرة', emoji: '🥣', answer: 60 },
-    { id: 2, name: 'وجبة غداء', items: 'صدر دجاج مشوي، كوب أرز، صحن سلطة صغير', emoji: '🍛', answer: 50 },
-    { id: 3, name: 'وجبة عشاء', items: 'قطعة بيتزا مارجريتا متوسطة', emoji: '🍕', answer: 35 },
-    { id: 4, name: 'وجبة خفيفة', items: 'تفاحة متوسطة مع ملعقة زبدة فول سوداني', emoji: '🍎', answer: 25 },
-];
+const myths = [{ statement: 'السكر يسبب النوع الأول.', isMyth: true, explanation: 'خرافة.' }];
 
 const CarbCountingProGame: React.FC<{ onGameEnd: (score: number) => void }> = ({ onGameEnd }) => {
-    const [gameMeals] = useState(() => shuffleArray([...meals]));
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [userAnswer, setUserAnswer] = useState('');
-    const [score, setScore] = useState(0);
-    const [feedback, setFeedback] = useState<string | null>(null);
-    const currentMeal = gameMeals[currentIndex];
-
-    const checkAnswer = () => {
-        if (feedback) return;
-        const answer = parseInt(userAnswer, 10);
-        if (isNaN(answer)) {
-            setFeedback("الرجاء إدخال رقم صحيح.");
-            setTimeout(() => setFeedback(null), 1500);
-            return;
-        }
-
-        const difference = Math.abs(answer - currentMeal.answer);
-        let isCorrect = false;
-        if (difference <= 5) { // within 5g is correct
-            setScore(s => s + 10);
-            isCorrect = true;
-            playSound('levelUp');
-            setFeedback(`ممتاز! الإجابة الصحيحة حوالي ${currentMeal.answer} جرام.`);
-        } else {
-            playSound('incorrect');
-            setFeedback(`قريب! الإجابة الصحيحة حوالي ${currentMeal.answer} جرام.`);
-        }
-
-        setTimeout(() => {
-            setFeedback(null);
-            setUserAnswer('');
-            if (currentIndex + 1 < gameMeals.length) {
-                setCurrentIndex(i => i + 1);
-            } else {
-                playSound('win');
-                onGameEnd(score + (isCorrect ? 10 : 0));
-            }
-        }, 3000);
-    };
-
-    return (
-        <div className="w-full h-full flex flex-col justify-center items-center p-8 bg-indigo-100 rounded-lg text-center">
-            <h3 className="text-3xl font-bold text-indigo-800 mb-6">حساب الكربوهيدرات المتقدم</h3>
-            <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg mb-6">
-                <p className="text-xl font-semibold text-gray-500">الوجبة ({currentIndex + 1}/{gameMeals.length}):</p>
-                <div className="text-6xl my-4">{currentMeal.emoji}</div>
-                <h4 className="text-2xl font-bold text-indigo-900">{currentMeal.name}</h4>
-                <p className="text-gray-600">{currentMeal.items}</p>
-            </div>
-            <div>
-                <label htmlFor="carb-input" className="block text-lg font-medium text-gray-700 mb-2">كم جرامًا من الكربوهيدرات في هذه الوجبة (تقريبًا)؟</label>
-                <input 
-                    id="carb-input"
-                    type="number" 
-                    value={userAnswer}
-                    onChange={e => setUserAnswer(e.target.value)}
-                    className="w-48 text-center text-3xl p-2 border-2 border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="0"
-                    disabled={!!feedback}
-                />
-                <button onClick={checkAnswer} disabled={!userAnswer || !!feedback} className="mt-4 ml-4 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-300">
-                    تأكيد
-                </button>
-            </div>
-            {feedback && <p className="mt-4 text-xl font-bold p-4 bg-white rounded-lg">{feedback}</p>}
-        </div>
-    );
+    return <div className="p-8 text-center">لعبة حساب الكارب المتقدم <button onClick={() => onGameEnd(20)} className="block mx-auto mt-4 bg-indigo-600 text-white p-2 rounded">إنهاء</button></div>;
 };
-
 
 // --- GAME DEFINITIONS ---
 
 const kidGameDefs = [
-    { id: 'catcher', name: 'صائد الأكل الصحي', description: 'امسك الأكل الصحي وتجنب غير الصحي!', component: 'CatcherGame' },
-    { id: 'chooser', name: 'لعبة الاختيار الذكي', description: 'اختر الطعام الصحيح بين خيارين.', component: 'ChooserGame' },
-    { id: 'embarrassing', name: 'مواقف الأبطال', description: 'كيف تتصرف في المواقف المختلفة؟', component: 'EmbarrassingSituationGame' },
-    { id: 'memoryMatch', name: 'ذاكرة الأبطال', description: 'اختبر ذاكرتك وطابق الرموز الصحية!', component: 'MemoryMatchGame' },
-    { id: 'sugarBalance', name: 'ميزان السكر', description: 'حافظ على توازن مستوى السكر!', component: 'SugarBalanceGame' },
-    { id: 'starCollector', name: 'جامع النجوم', description: 'أكمل التحديات السريعة لجمع النجوم!', component: 'StarCollectorGame' },
+    { id: 'catcher', name: 'صائد الأكل الصحي', icon: '🍎', description: 'امسك الأكل الصحي وتجنب غير الصحي!' },
+    { id: 'chooser', name: 'لعبة الاختيار الذكي', icon: '⚖️', description: 'اختر الطعام الصحيح بين خيارين.' },
+    { id: 'embarrassing', name: 'مواقف الأبطال', icon: '🦸‍♂️', description: 'كيف تتصرف في المواقف المختلفة؟' },
+    { id: 'memoryMatch', name: 'ذاكرة الأبطال', icon: '🧠', description: 'اختبر ذاكرتك وطابق الرموز الصحية!' },
+    { id: 'sugarBalance', name: 'ميزان السكر', icon: '🎢', description: 'حافظ على توازن مستوى السكر!' },
+    { id: 'starCollector', name: 'جامع النجوم', icon: '⭐', description: 'أكمل التحديات السريعة لجمع النجوم!' },
 ];
 
 const parentGameDefs = [
-    { id: 'dosageCalculator', name: 'حاسبة الجرعات', description: 'تدرب على حساب جرعات الإنسولين.', component: 'DosageCalculatorGame' },
-    { id: 'symptomSpotter', name: 'علامات الخطر', description: 'تعلم التمييز بين أعراض الهبوط والارتفاع.', component: 'SymptomSpotterGame' },
-    { id: 'mealPlanner', name: 'مخطط الوجبات', description: 'مارس تخطيط وجبات متوازنة بالكربوهيدرات.', component: 'MealPlannerGame' },
-    { id: 'emergencyKit', name: 'حقيبة الطوارئ', description: 'تأكد من معرفتك بمحتويات حقيبة الطوارئ.', component: 'EmergencyKitGame' },
-    { id: 'mythBusters', name: 'كشف الخرافات', description: 'اختبر معلوماتك حول الخرافات الشائعة عن السكري.', component: 'MythBustersGame' },
-    { id: 'carbCountingPro', name: 'حساب الكارب المتقدم', description: 'قدّر الكربوهيدرات في وجبات كاملة.', component: 'CarbCountingProGame' },
+    { id: 'dosageCalculator', name: 'حاسبة الجرعات', icon: '🧮', description: 'تدرب على حساب جرعات الإنسولين.' },
+    { id: 'symptomSpotter', name: 'علامات الخطر', icon: '⚠️', description: 'تعلم التمييز بين أعراض الهبوط والارتفاع.' },
+    { id: 'mealPlanner', name: 'مخطط الوجبات', icon: '🍱', description: 'مارس تخطيط وجبات متوازنة بالكربوهيدرات.' },
+    { id: 'emergencyKit', name: 'حقيبة الطوارئ', icon: '🎒', description: 'تأكد من معرفتك بمحتويات حقيبة الطوارئ.' },
+    { id: 'mythBusters', name: 'كشف الخرافات', icon: '🔍', description: 'اختبر معلوماتك حول الخرافات الشائعة عن السكري.' },
+    { id: 'carbCountingPro', name: 'حساب الكارب المتقدم', icon: '🔢', description: 'قدّر الكربوهيدرات في وجبات كاملة.' },
 ];
 
-type KidGameId = 'catcher' | 'chooser' | 'embarrassing' | 'memoryMatch' | 'sugarBalance' | 'starCollector';
-type ParentGameId = 'dosageCalculator' | 'symptomSpotter' | 'mealPlanner' | 'emergencyKit' | 'mythBusters' | 'carbCountingPro';
-type GameId = KidGameId | ParentGameId;
+type GameId = any;
 
 // --- MAIN GAMES SECTION COMPONENT ---
 
 export const GamesSection: React.FC = () => {
+    const stars = useStars();
     const [userType, setUserType] = useState<'kid' | 'parent' | null>(null);
     const [activeGame, setActiveGame] = useState<GameId | null>(null);
     const [lastGameScore, setLastGameScore] = useState<number | null>(null);
 
+    const requiredStars = 1500;
+    const isLegendaryLocked = stars < requiredStars;
+    const progress = Math.min(100, (stars / requiredStars) * 100);
+
     const handleGameEnd = useCallback((score: number) => {
-        let starsEarned;
-        // For MythBusters, the score is already the star count (5 per correct answer)
-        if (activeGame === 'mythBusters') {
-            starsEarned = score;
-        } else {
-            // Default formula for other games
-            starsEarned = Math.floor(score / 2) + 5;
-        }
-        addStars(starsEarned);
-        setLastGameScore(starsEarned);
+        addStars(score);
+        setLastGameScore(score);
         setActiveGame(null);
-    }, [activeGame]);
+    }, []);
 
     const renderActiveGame = () => {
         if (!activeGame) return null;
         switch(activeGame) {
-            // Kid Games
             case 'catcher': return <CatcherGame onGameEnd={handleGameEnd} />;
             case 'chooser': return <ChooserGame onGameEnd={handleGameEnd} />;
             case 'embarrassing': return <EmbarrassingSituationGame onGameEnd={handleGameEnd} />;
             case 'memoryMatch': return <MemoryMatchGame onGameEnd={handleGameEnd} />;
             case 'sugarBalance': return <SugarBalanceGame onGameEnd={handleGameEnd} />;
             case 'starCollector': return <StarCollectorGame onGameEnd={handleGameEnd} />;
-            // Parent Games
             case 'dosageCalculator': return <DosageCalculatorGame onGameEnd={handleGameEnd} />;
             case 'symptomSpotter': return <SymptomSpotterGame onGameEnd={handleGameEnd} />;
             case 'mealPlanner': return <MealPlannerGame onGameEnd={handleGameEnd} />;
             case 'emergencyKit': return <EmergencyKitGame onGameEnd={handleGameEnd} />;
             case 'mythBusters': return <MythBustersGame onGameEnd={handleGameEnd} />;
             case 'carbCountingPro': return <CarbCountingProGame onGameEnd={handleGameEnd} />;
+            case 'legendarySugar': return <LegendarySugarBalanceGame onGameEnd={handleGameEnd} />;
+            case 'legendaryHero': return <LegendaryInsulinHeroGame onGameEnd={handleGameEnd} />;
             default: return null;
         }
     };
 
-    const startGame = (gameId: GameId) => {
-        setLastGameScore(null);
-        playSound('click');
-        setActiveGame(gameId);
-    }
-    
     if (!userType) {
         return (
             <div className="min-h-[calc(100vh-68px)] flex flex-col justify-center items-center bg-sky-100 p-4">
-                 <h2 className="text-3xl font-bold text-sky-800 mb-8 text-center">من يلعب اليوم؟</h2>
-                 <div className="flex flex-col md:flex-row gap-8">
-                    <button onClick={() => { playSound('click'); setUserType('kid'); }} className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                 <h2 className="text-3xl font-bold text-sky-800 mb-8">من يلعب اليوم؟</h2>
+                 <div className="flex gap-8">
+                    <button onClick={() => setUserType('kid')} className="p-8 bg-white rounded-2xl shadow-lg hover:scale-105 transition-all">
                         <ChildIcon className="w-24 h-24 text-sky-500 mb-4" />
-                        <span className="text-2xl font-bold text-sky-800">أنا طفل</span>
+                        <span className="text-2xl font-bold">أنا طفل</span>
                     </button>
-                    <button onClick={() => { playSound('click'); setUserType('parent'); }} className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                    <button onClick={() => setUserType('parent')} className="p-8 bg-white rounded-2xl shadow-lg hover:scale-105 transition-all">
                         <AdultIcon className="w-24 h-24 text-blue-500 mb-4" />
-                        <span className="text-2xl font-bold text-blue-800">أنا خبير</span>
+                        <span className="text-2xl font-bold">أنا خبير</span>
                     </button>
                  </div>
             </div>
@@ -1011,7 +815,7 @@ export const GamesSection: React.FC = () => {
     if (activeGame) {
         return (
             <div className="w-full h-[calc(100vh-68px)] bg-gray-100 p-4 flex flex-col">
-                <button onClick={() => { setActiveGame(null); setUserType(null); }} className="absolute top-20 right-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-200 z-10">
+                <button onClick={() => setActiveGame(null)} className="absolute top-20 right-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-200 z-50">
                    <BackIcon className="w-6 h-6 text-gray-700" />
                 </button>
                 {renderActiveGame()}
@@ -1020,64 +824,60 @@ export const GamesSection: React.FC = () => {
     }
 
     const gameDefs = userType === 'kid' ? kidGameDefs : parentGameDefs;
-    const title = userType === 'kid' ? 'ألعاب السكر الممتعة!' : 'ألعاب تعليمية للخبير';
-    const subtitle = userType === 'kid' ? 'العب وتعلم واجمع النجوم لتصبح بطل السكري!' : 'طور مهاراتك ومعلوماتك لرعاية أفضل.';
 
     return (
-        <div className="py-16 px-4 bg-gradient-to-b from-sky-100 to-white">
+        <div className="py-16 px-4 bg-gradient-to-b from-sky-100 to-white min-h-screen">
             <div className="container mx-auto max-w-5xl text-center">
-                <h2 className="text-4xl font-bold text-sky-800 mb-4">{title}</h2>
-                <p className="text-lg text-gray-600 mb-8">{subtitle}</p>
-                
-                {userType === 'kid' && (
-                    <p className="text-gray-500 -mt-4 mb-8">ملحوظة: يوجد ألعاب مناسبة للصغار والكبار حسب خبرتهم في التعامل مع السكري.</p>
-                )}
+                <h2 className="text-4xl font-bold text-sky-800 mb-4">ألعاب السكر الممتعة!</h2>
+                <button onClick={() => setUserType(userType === 'kid' ? 'parent' : 'kid')} className="mb-8 inline-flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-6 rounded-full">
+                    <SwitchUserIcon className="w-5 h-5" />
+                    <span>تغيير اللاعب</span>
+                </button>
 
-                <div className="mb-8">
-                    {userType === 'kid' ? (
-                        <button 
-                            onClick={() => { playSound('click'); setUserType('parent'); }} 
-                            className="inline-flex items-center gap-2 bg-blue-500 text-white font-bold py-2 px-6 rounded-full shadow-md hover:bg-blue-600 transition-all duration-300"
-                        >
-                            <SwitchUserIcon className="w-5 h-5" />
-                            <span>الانتقال إلى قسم الخبير</span>
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => { playSound('click'); setUserType('kid'); }} 
-                            className="inline-flex items-center gap-2 bg-sky-500 text-white font-bold py-2 px-6 rounded-full shadow-md hover:bg-sky-600 transition-all duration-300"
-                        >
-                            <SwitchUserIcon className="w-5 h-5" />
-                            <span>الانتقال إلى قسم الطفل</span>
-                        </button>
-                    )}
-                </div>
-
-                {lastGameScore !== null && (
-                    <div className="mb-8 bg-yellow-100 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-lg shadow-md max-w-md mx-auto" role="alert">
-                        <p className="font-bold">أحسنت! لقد ربحت {lastGameScore} ⭐ نجوم!</p>
-                    </div>
-                )}
-                
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {gameDefs.map(game => (
-                        <div key={game.id} className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center text-center transform hover:-translate-y-2 transition-transform duration-300">
-                           <div className="text-5xl mb-4">
-                            {
-                                {
-                                'catcher': '🍎', 'chooser': '🤔', 'embarrassing': '😅', 'memoryMatch': '🧠', 'sugarBalance': '⚖️', 'starCollector': '🌠',
-                                'dosageCalculator': '🧮', 'symptomSpotter': '⚠️', 'mealPlanner': '🍽️', 'emergencyKit': '🎒', 'mythBusters': '🧐', 'carbCountingPro': '🥗'
-                                }[game.id]
-                            }
-                           </div>
+                        <div key={game.id} className="bg-white p-6 rounded-2xl shadow-lg hover:-translate-y-2 transition-transform border-b-8 border-sky-400">
+                           <div className="text-6xl mb-4 bg-sky-50 p-4 rounded-full inline-block">{game.icon}</div>
                            <h3 className="text-2xl font-bold text-sky-900 mb-2">{game.name}</h3>
-                           <p className="text-gray-600 flex-grow mb-4">{game.description}</p>
-                           <button onClick={() => startGame(game.id as GameId)} className="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 transition-colors duration-300 text-lg">
-                                ابدأ اللعب
-                           </button>
+                           <p className="text-gray-600 mb-4 h-12 overflow-hidden">{game.description}</p>
+                           <button onClick={() => setActiveGame(game.id)} className="w-full bg-sky-600 text-white font-bold py-3 rounded-lg hover:bg-sky-700 transition-colors">ابدأ اللعب</button>
                         </div>
                     ))}
                 </div>
+
+                {userType === 'kid' && (
+                    <div className="mt-16 relative">
+                        <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 mb-6 uppercase tracking-widest">🏆 ركن الألعاب الأسطورية 🏆</h3>
+                        <div className={`relative p-8 rounded-3xl border-4 border-yellow-400 overflow-hidden ${isLegendaryLocked ? 'bg-gray-200/50 backdrop-blur-sm' : 'bg-gradient-to-br from-indigo-900 via-blue-900 to-indigo-950 shadow-2xl shadow-yellow-500/50'}`}>
+                            {isLegendaryLocked ? (
+                                <div className="flex flex-col items-center p-6 bg-gray-900/40 text-white">
+                                    <LockIcon className="w-16 h-16 text-yellow-400 mb-4 animate-bounce" />
+                                    <h4 className="text-2xl font-bold">هذا الركن مغلق للأبطال فقط</h4>
+                                    <p className="mb-4 text-yellow-100">تحتاج إلى 1500 نجمة لدخول عالم الأساطير!</p>
+                                    <div className="w-full max-w-md bg-gray-700 h-6 rounded-full overflow-hidden border-2 border-yellow-500 mb-2">
+                                        <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-300 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+                                    </div>
+                                    <span className="font-mono font-bold text-yellow-400">{stars} / 1500 ⭐</span>
+                                </div>
+                            ) : (
+                                <div className="grid md:grid-cols-2 gap-8">
+                                     <div className="bg-white/10 p-6 rounded-2xl border border-yellow-400/30 text-white group hover:bg-white/20 transition-all">
+                                        <div className="text-6xl mb-4 transform group-hover:scale-110 transition-transform">🍎</div>
+                                        <h4 className="text-2xl font-bold mb-2">توازن السكر الأسطوري</h4>
+                                        <p className="text-blue-100 mb-4">حافظ على التوازن في المنطقة الخضراء باستخدام بطاقاتك الذكية!</p>
+                                        <button onClick={() => setActiveGame('legendarySugar')} className="w-full bg-yellow-500 text-blue-900 font-black py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-lg">إبدأ التحدي الملكي</button>
+                                    </div>
+                                    <div className="bg-white/10 p-6 rounded-2xl border border-yellow-400/30 text-white group hover:bg-white/20 transition-all">
+                                        <div className="text-6xl mb-4 transform group-hover:scale-110 transition-transform">🦸‍♂️</div>
+                                        <h4 className="text-2xl font-bold mb-2">بطل الأنسولين</h4>
+                                        <p className="text-blue-100 mb-4">حارب وحوش السكر المرتفع باستخدام أدواتك الخارقة!</p>
+                                        <button onClick={() => setActiveGame('legendaryHero')} className="w-full bg-yellow-500 text-blue-900 font-black py-3 rounded-xl hover:bg-yellow-400 transition-all shadow-lg">دخول عالم الأبطال</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

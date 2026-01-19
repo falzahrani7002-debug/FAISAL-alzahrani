@@ -45,7 +45,7 @@ const InsulinPenIcon: React.FC = () => (
     </svg>
 );
 
-// New Rain Effect Component
+// Rain Effect Component
 const RainEffect: React.FC = () => {
     const dropCount = 75;
     return (
@@ -83,6 +83,58 @@ const RainEffect: React.FC = () => {
     );
 };
 
+// Growing Garden Component
+const GrowingGarden: React.FC = () => {
+    const flowerCount = 20;
+    const flowers = ['🌸', '🌼', '🌷', '🌻', '🌺', '🌹'];
+    return (
+        <div className="absolute bottom-0 left-0 w-full h-24 overflow-hidden pointer-events-none z-0 flex items-end justify-around px-10">
+            {Array.from({ length: flowerCount }).map((_, i) => {
+                const flower = flowers[Math.floor(Math.random() * flowers.length)];
+                const style = {
+                    animationDelay: `${Math.random() * 4}s`,
+                    fontSize: `${1.5 + Math.random() * 1.5}rem`,
+                    transformOrigin: 'bottom center',
+                };
+                return (
+                    <span key={i} className="growing-flower" style={style}>
+                        {flower}
+                    </span>
+                );
+            })}
+            <style>{`
+                .growing-flower {
+                    opacity: 0;
+                    transform: scale(0) translateY(20px);
+                    animation: bloom 4s ease-out forwards, sway 3s ease-in-out infinite alternate;
+                }
+                @keyframes bloom {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0) translateY(20px);
+                    }
+                    50% {
+                        opacity: 1;
+                        transform: scale(1.2) translateY(-5px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                    }
+                }
+                @keyframes sway {
+                    from {
+                        transform: rotate(-5deg);
+                    }
+                    to {
+                        transform: rotate(5deg);
+                    }
+                }
+            `}</style>
+        </div>
+    );
+};
+
 
 const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
   return (
@@ -91,12 +143,13 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
       <div className="absolute bottom-10 -right-24 w-72 h-72 bg-blue-200 rounded-full opacity-50 filter blur-xl z-0"></div>
       
       <RainEffect />
+      <GrowingGarden />
 
       {/* Decorative Insulin Pens */}
       <div className="absolute top-8 left-8 w-16 h-16 transform -rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
       <div className="absolute top-8 right-8 w-16 h-16 transform rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
-      <div className="absolute bottom-8 left-8 w-16 h-16 transform rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
-      <div className="absolute bottom-8 right-8 w-16 h-16 transform -rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
+      <div className="absolute bottom-16 left-12 w-16 h-16 transform rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
+      <div className="absolute bottom-16 right-12 w-16 h-16 transform -rotate-45 opacity-60 z-0 hidden md:block"><InsulinPenIcon /></div>
 
 
       <div className="container mx-auto max-w-4xl z-10">
