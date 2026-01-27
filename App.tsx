@@ -9,19 +9,20 @@ import TrackerSection from './components/TrackerSection';
 import MyJourneySection from './components/MyJourneySection';
 import SmartChoicesSection from './components/SmartChoicesSection';
 import CommunitySection from './components/CommunitySection';
-// FIX: Changed to a named import as GamesSection is not a default export.
 import { GamesSection } from './components/GamesSection';
 import EducationalContentSection from './components/EducationalContentSection';
 import InsulinFriendSection from './components/InsulinFriendSection';
 import StarCollectionSection from './components/StarCollectionSection';
 import Footer from './components/Footer';
 import CarbCalculatorSection from './components/CarbCalculatorSection';
+import RainEffect from './components/RainEffect';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
 
   const navigateTo = useCallback((page: Page) => {
     setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const renderPage = () => {
@@ -56,9 +57,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col relative">
+      <RainEffect />
       <Header navigateTo={navigateTo} currentPage={currentPage} />
-      <main className="flex-grow">
+      <main className="flex-grow relative z-10">
         {renderPage()}
       </main>
       <Footer />
