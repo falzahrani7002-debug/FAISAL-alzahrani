@@ -15,7 +15,7 @@ import InsulinFriendSection from './components/InsulinFriendSection';
 import StarCollectionSection from './components/StarCollectionSection';
 import Footer from './components/Footer';
 import CarbCalculatorSection from './components/CarbCalculatorSection';
-import RainEffect from './components/RainEffect';
+import SnowEffect from './components/SnowEffect';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
@@ -58,7 +58,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col relative">
-      <RainEffect />
+      <SnowEffect />
       <Header navigateTo={navigateTo} currentPage={currentPage} />
       <main className="flex-grow relative z-10">
         {renderPage()}
